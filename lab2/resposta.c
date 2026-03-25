@@ -1,7 +1,6 @@
 #include <stdio.h>
 #define N 50
 #include <stdlib.h>
-#include <string.h>
 
 struct elemento {
     char info;
