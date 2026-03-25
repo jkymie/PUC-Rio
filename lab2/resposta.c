@@ -45,8 +45,8 @@ char pop() {
     }
     Elemento* t = p->topo; // guardamos o endereço do elemento do topo da pilha
     char c = t->info; // pegamos o valor da info do topo para exibir
-    p->topo = t->prox; // 
-    free(t);
+    p->topo = t->prox; // o topo agora é o elemento que estava abaixo do topo
+    free(t); // liberamos o elemento que estava no topo anteriormente
     return c;
 }
 
