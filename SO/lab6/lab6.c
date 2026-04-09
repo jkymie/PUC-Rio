@@ -5,9 +5,6 @@
 #include <sys/time.h>
 
 /*
- * Escalonador de tempo real (simulação com SIGSTOP/SIGCONT)
- *
- * A cada minuto:
  *   P1 executa do segundo 5  ao 25  (duração 20s)
  *   P2 executa do segundo 45 ao 60  (duração 15s)
  *   P3 executa quando nem P1 nem P2 estão ativos (0-5 e 25-45)
@@ -18,7 +15,7 @@
 static pid_t pids[N];
 static int   rodando[N] = {0, 0, 0};
 
-/* Envia SIGCONT apenas se o processo está parado */
+/* envia SIGCONT apenas se o processo está parado */
 static void continua(int i) {
     if (!rodando[i]) {
         kill(pids[i], SIGCONT);
@@ -28,7 +25,7 @@ static void continua(int i) {
     }
 }
 
-/* Envia SIGSTOP apenas se o processo está rodando */
+/* envia SIGSTOP apenas se o processo está rodando */
 static void para(int i) {
     if (rodando[i]) {
         kill(pids[i], SIGSTOP);
@@ -38,17 +35,16 @@ static void para(int i) {
     }
 }
 
-/* Ao receber Ctrl+C, acorda e termina todos os filhos */
 static void encerra(int sig) {
     printf("\n[escalonador] encerrando...\n");
     for (int i = 0; i < N; i++) {
-        kill(pids[i], SIGCONT);   /* acorda caso esteja parado */
+        kill(pids[i], SIGCONT); 
         kill(pids[i], SIGTERM);
     }
     exit(0);
 }
 
-/* Código executado pelos processos filhos */
+/* execução do processo filho por segundo */
 static void filho(int num) {
     while (1) {
         printf("  P%d (pid=%d) executando\n", num, getpid());
@@ -58,7 +54,7 @@ static void filho(int num) {
 }
 
 int main() {
-    /* Cria os 3 processos filhos */
+    /* cria os 3 processos filhos */
     for (int i = 0; i < N; i++) {
         pids[i] = fork();
         if (pids[i] < 0) {
@@ -70,7 +66,7 @@ int main() {
         }
     }
 
-    /* Para todos imediatamente após a criação */
+    /* para todos processos imediatamente após a criação */
     for (int i = 0; i < N; i++)
         kill(pids[i], SIGSTOP);
 
@@ -83,18 +79,18 @@ int main() {
 
     struct timeval tv;
 
-    /* Loop infinito do escalonador */
+    /* loop infinito do escalonador */
     while (1) {
         gettimeofday(&tv, NULL);
         int seg = (int)(tv.tv_sec % 60);
 
         if (seg >= 5 && seg < 25) {
-            /* janela de P1 */
+            /* P1 */
             continua(0);
             para(1);
             para(2);
         } else if (seg >= 45) {
-            /* janela de P2 */
+            /* P2 */
             para(0);
             continua(1);
             para(2);
