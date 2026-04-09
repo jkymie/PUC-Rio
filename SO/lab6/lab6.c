@@ -50,7 +50,6 @@ static void encerra(int sig) {
 
 /* Código executado pelos processos filhos */
 static void filho(int num) {
-    raise(SIGSTOP);   /* filho se para; só executa quando o escalonador mandar SIGCONT */
     while (1) {
         printf("  P%d (pid=%d) executando\n", num, getpid());
         fflush(stdout);
@@ -59,7 +58,7 @@ static void filho(int num) {
 }
 
 int main() {
-    /* Cria os 3 processos filhos, parando cada um imediatamente após o fork */
+    /* Cria os 3 processos filhos */
     for (int i = 0; i < N; i++) {
         pids[i] = fork();
         if (pids[i] < 0) {
@@ -69,8 +68,11 @@ int main() {
         if (pids[i] == 0) {
             filho(i + 1);
         }
-        kill(pids[i], SIGSTOP);
     }
+
+    /* Para todos imediatamente após a criação */
+    for (int i = 0; i < N; i++)
+        kill(pids[i], SIGSTOP);
 
     signal(SIGINT, encerra);
 
