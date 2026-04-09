@@ -1,0 +1,122 @@
+================================================================================
+                              RELATÓRIO - LAB 6
+                         Sistemas Operacionais
+================================================================================
+
+IDENTIFICAÇÃO
+--------------------------------------------------------------------------------
+Aluno 1: Pedro Loschi Giovannini       Matrícula: 2421257
+Aluno 2: Julia Kymie Dias Okada        Matrícula: 2421312
+
+
+================================================================================
+OBJETIVO
+================================================================================
+
+Implementar em C um programa escalonador que simula a política de escalonamento
+de tempo real. O escalonador executa em loop infinito criando três processos
+filhos (P1, P2 e P3) e os gerencia periodicamente a cada minuto da seguinte
+forma: P1 inicia após 5 segundos do início do minuto e executa por 20 segundos
+(segundos 5 a 25); P2 inicia após 45 segundos e executa por 15 segundos
+(segundos 45 a 60); P3 executa nos intervalos em que nem P1 nem P2 estão ativos
+(segundos 0 a 5 e 25 a 45). O controle de execução deve ser feito com os sinais
+SIGCONT e SIGSTOP, e o tempo deve ser obtido com a chamada gettimeofday.
+
+
+================================================================================
+ESTRUTURA DO PROGRAMA
+================================================================================
+
+O programa utiliza cinco bibliotecas:
+
+- stdio.h    : fornece printf e fflush, usados para exibir as mensagens do
+               escalonador e dos filhos
+- stdlib.h   : fornece exit, usado para encerrar processos
+- unistd.h   : fornece fork, sleep, usleep e getpid
+- signal.h   : fornece kill e signal, além das constantes SIGSTOP, SIGCONT,
+               SIGTERM e SIGINT
+- sys/time.h : fornece gettimeofday e o tipo struct timeval
+
+As funções implementadas são:
+
+- continua(int i)   : envia SIGCONT ao processo pids[i] somente se ele estiver
+                      parado, atualizando o vetor de estado rodando[]
+- para(int i)       : envia SIGSTOP ao processo pids[i] somente se ele estiver
+                      em execução, atualizando o vetor de estado rodando[]
+- encerra(int sig)  : handler do sinal SIGINT (Ctrl+C); acorda todos os filhos
+                      com SIGCONT antes de enviar SIGTERM, evitando processos
+                      parados permanentemente
+- filho(int num)    : executada por cada processo filho; roda um loop infinito
+                      imprimindo seu número e PID a cada segundo
+- main              : cria os 3 filhos, para todos com SIGSTOP, registra o
+                      handler de SIGINT e entra no loop do escalonador
+
+
+================================================================================
+SOLUÇÃO
+================================================================================
+
+O programa inicia em main criando os três processos filhos em sequência com
+fork(). Cada filho cai no bloco if (pids[i] == 0) e chama filho(i+1), que
+executa indefinidamente imprimindo seu nome e PID a cada segundo. O pai, ao
+retornar de cada fork(), armazena o PID do filho no vetor pids[].
+
+Assim que os três filhos são criados, o pai envia SIGSTOP a todos
+imediatamente, pausando-os antes que produzam qualquer saída. Em seguida
+registra o handler encerra para o sinal SIGINT e imprime os PIDs dos três
+filhos para referência.
+
+O escalonador então entra no seu loop infinito. A cada iteração, chama
+gettimeofday(&tv, NULL) e calcula o segundo atual dentro do minuto com
+seg = tv.tv_sec % 60. Com base nesse valor, determina qual processo deve
+estar ativo:
+
+- Se seg >= 5 && seg < 25 : chama continua(0) para P1 e para(1), para(2)
+                             para P2 e P3
+- Se seg >= 45             : chama continua(1) para P2 e para(0), para(2)
+                             para P1 e P3
+- Caso contrário (0-5 e 25-45): chama continua(2) para P3 e para(0), para(1)
+                                 para P1 e P2
+
+As funções continua e para verificam o vetor rodando[] antes de enviar qualquer
+sinal, garantindo que SIGCONT e SIGSTOP sejam enviados apenas nas transições de
+estado — evitando sinais redundantes a cada 100ms. Ao final de cada iteração,
+usleep(100000) faz o escalonador aguardar 100ms antes de verificar novamente.
+
+[PRINT 1]: execute ./escalonador e aguarde pelo menos um minuto completo,
+capturando a saída do terminal mostrando as transições P3->P1->P3->P2 com as
+mensagens [escalonador] Px CONT/STOP intercaladas com as linhas
+Px (pid=...) executando
+
+[PRINT 2]: mostre a saída do comando "ps aux | grep escalonador" (ou
+"ps -e | grep escalonador") enquanto o programa está rodando, evidenciando
+os processos filhos com status T (stopped) e S/R (ativo)
+
+
+================================================================================
+OBSERVAÇÕES E CONCLUSÕES
+================================================================================
+
+A principal facilidade do programa foi o uso de tv.tv_sec % 60 para obter o
+segundo atual dentro do minuto, tornando a lógica de escalonamento simples e
+direta sem necessidade de temporizadores complexos. O controle por SIGSTOP e
+SIGCONT também se mostrou eficaz: o processo parado consome zero CPU, simulando
+fielmente a ideia de um processo que não está no processador.
+
+A dificuldade central foi garantir que os sinais fossem enviados apenas nas
+transições de estado. Sem o vetor rodando[], o escalonador enviaria SIGSTOP ou
+SIGCONT a cada 100ms mesmo sem mudança de estado, o que seria desnecessário e
+poderia causar comportamento inesperado. Outro ponto de atenção foi o
+encerramento: um processo em estado SIGSTOP não pode receber SIGTERM — ele
+ficaria parado permanentemente. Por isso o handler encerra envia SIGCONT antes
+de SIGTERM a cada filho.
+
+O programa funciona corretamente para o objetivo proposto: os três processos
+alternam conforme a janela de tempo do minuto, o escalonador exibe cada
+transição e os filhos imprimem enquanto estão ativos. O que não é controlado
+pelo programa é a precisão de milissegundos na fronteira de cada janela — como
+a verificação ocorre a cada 100ms, pode haver um atraso de até 100ms no momento
+exato da transição, o que é aceitável para uma simulação mas não para um
+sistema de tempo real estrito.
+
+================================================================================
