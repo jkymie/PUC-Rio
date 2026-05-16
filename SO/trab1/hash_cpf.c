@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* tamanho da tabela: primo um pouco acima de 4096*1.2 = 4915 */
 #define N      5003
-#define HMOD2  4999   /* primo menor que N, usado no passo */
+#define HMOD2  4999
 #define MAX    4096
 
 long long tabela[N];
@@ -14,11 +13,6 @@ void inicializa() {
         tabela[i] = -1;
 }
 
-/*
- * double hashing: h1 = cpf % N, h2 = 1 + (cpf % HMOD2)
- * retorna quantas colisoes ocorreram antes de achar slot livre
- * retorna -1 se nao encontrou (tabela cheia)
- */
 int insere(long long cpf) {
     int pos   = (int)(cpf % N);
     int passo = (int)(1 + (cpf % HMOD2));
