@@ -51,10 +51,16 @@ int main() {
         cpfs[n++] = cpf;
     fclose(arq);
 
-    fprintf(stderr, "CPFs lidos: %d  tamanho da tabela: %d\n", n, N);
+    printf("CPFs lidos: %d  tamanho da tabela: %d\n", n, N);
+
+    FILE *csv = fopen("resultados.csv", "w");
+    if (!csv) {
+        printf("erro: nao foi possivel criar resultados.csv\n");
+        return 1;
+    }
 
     inicializa();
-    printf("chaves_inseridas,colisoes_acumuladas\n");
+    fprintf(csv, "chaves_inseridas,colisoes_acumuladas\n");
 
     for (i = 0; i < n; i++) {
         col = insere(cpfs[i]);
@@ -62,8 +68,11 @@ int main() {
             total += col;
 
         if ((i + 1) % 100 == 0 || i + 1 == n)
-            printf("%d,%lld\n", i + 1, total);
+            fprintf(csv, "%d,%lld\n", i + 1, total);
     }
+
+    fclose(csv);
+    printf("CSV gerado: resultados.csv\n");
 
     return 0;
 }

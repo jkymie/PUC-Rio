@@ -6,8 +6,8 @@ arq = sys.argv[1] if len(sys.argv) > 1 else "resultados.csv"
 chaves = []
 colisoes = []
 
-with open(arq, encoding="utf-16") as f:
-    f.readline()  # pula cabecalho
+with open(arq, encoding="utf-8") as f:
+    f.readline()
     for linha in f:
         linha = linha.strip()
         if linha:
