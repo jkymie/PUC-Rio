@@ -1,0 +1,255 @@
+================================================================================
+                     TRABALHO PRATICO - TABELA HASH COM CPFs
+================================================================================
+
+--------------------------------------------------------------------------------
+1. IDENTIFICACAO
+--------------------------------------------------------------------------------
+
+Aluno : Julia Kymie Dias Okada
+Matricula: 2421312
+
+
+--------------------------------------------------------------------------------
+2. OBJETIVO
+--------------------------------------------------------------------------------
+
+O trabalho consiste em armazenar aproximadamente 4096 numeros de CPF em uma
+tabela hash de tamanho fixo, utilizando endereçamento aberto para o tratamento
+de colisoes. O tamanho da tabela deve ter uma folga de cerca de 20% em relacao
+ao numero de chaves, e o metodo de resolucao de colisoes escolhido deve
+promover boa dispersao das chaves.
+
+Alem da implementacao da tabela, o programa deve gerar dados que permitam
+construir um grafico mostrando a relacao entre a quantidade de chaves inseridas
+(de 100 em 100, ate 4096) e o total acumulado de colisoes ocorridas, de modo
+a ilustrar o comportamento da funcao hash conforme a tabela vai sendo preenchida.
+
+
+--------------------------------------------------------------------------------
+3. ESTRUTURA DO PROGRAMA
+--------------------------------------------------------------------------------
+
+O projeto e composto por tres arquivos:
+
+  hash_cpf.c
+  ----------
+  Programa principal em linguagem C. Contem as seguintes funcoes:
+
+    h1(ll k)
+      Funcao hash primaria. Calcula k % N, onde N = 5003 (primo).
+      Distribui as chaves numericas uniformemente pelas posicoes da tabela.
+
+    h2(ll k)
+      Funcao hash secundaria usada no double hashing.
+      Calcula 1 + (k % H2_PRIME), onde H2_PRIME = 4999 (primo).
+      Garante que o passo de sondagem seja sempre >= 1 e diferente para
+      cada chave, eliminando agrupamentos.
+
+    table_init()
+      Inicializa todos os N slots da tabela com o valor sentinela EMPTY (-1),
+      indicando posicao vazia.
+
+    insert(ll k)
+      Insere a chave k na tabela usando double hashing.
+      Retorna o numero de colisoes sofridas durante aquela insercao especifica
+      (0 significa que a posicao inicial estava livre).
+      Retorna -1 caso a tabela esteja completamente cheia.
+
+    main()
+      Abre e le o arquivo CPFsValidos.txt, armazenando os CPFs em um vetor.
+      Inicializa a tabela, insere as chaves uma a uma acumulando as colisoes
+      e imprime uma linha CSV a cada 100 insercoes (e na ultima).
+
+  grafico.py
+  ----------
+  Script Python que le o arquivo CSV gerado pelo programa C e produz o grafico
+  "Chaves Inseridas x Colisoes Acumuladas" usando a biblioteca matplotlib.
+  Salva o grafico no arquivo grafico_colisoes.png.
+
+  CPFsValidos.txt
+  ---------------
+  Arquivo de entrada fornecido pelo professor, contendo 4096 numeros de CPF
+  validos (11 digitos cada), um por linha.
+
+
+--------------------------------------------------------------------------------
+4. SOLUCAO
+--------------------------------------------------------------------------------
+
+4.1 Escolha do tamanho da tabela
+---------------------------------
+Com 4096 chaves e folga de ~20%, o tamanho minimo seria 4096 * 1.2 = 4915.
+Foi escolhido N = 5003, que e o menor numero primo acima de 4915.
+Usar um primo como tamanho da tabela e fundamental para o double hashing,
+pois garante que toda a tabela seja percorrida antes de haver repeticao de
+posicoes na sondagem.
+
+  Fator de carga ao inserir todas as chaves: 4096 / 5003 ≈ 0,819 (81,9%)
+
+4.2 Funcao hash primaria
+-------------------------
+  h1(k) = k % 5003
+
+O CPF e tratado como um inteiro de 11 digitos (long long). O modulo por um
+primo distribui as chaves de forma uniforme, pois os CPFs sao sequencias
+numericas sem um padrao de multiplos que favoreceria colisoes com divisores
+nao primos.
+
+4.3 Tratamento de colisoes - Double Hashing
+--------------------------------------------
+Foi escolhido o double hashing (duplo hash) por ser o metodo de endereçamento
+aberto com menor tendencia de agrupamento (clustering).
+
+  - Sondagem linear agrupa chaves em blocos contiguos, degradando rapidamente.
+  - Sondagem quadratica elimina o agrupamento primario, mas ainda gera
+    agrupamento secundario (chaves com mesmo h1 percorrem a mesma sequencia).
+  - Double hashing usa um passo variavel por chave, eliminando ambos os tipos
+    de agrupamento.
+
+A sequencia de sondagem e:
+  pos(i) = (h1(k) + i * h2(k)) % N
+
+  onde h2(k) = 1 + (k % 4999)
+
+O valor 4999 e primo e ligeiramente menor que N. Isso garante que:
+  a) o passo seja sempre entre 1 e 4999 (nunca zero);
+  b) como mdc(h2(k), N) = 1 para qualquer k (pois N = 5003 e primo),
+     a sequencia percorre todas as N posicoes antes de repetir.
+
+4.4 Logica de insercao e contagem de colisoes
+----------------------------------------------
+Para cada CPF a inserir:
+  1. Calcula pos = h1(k) e step = h2(k).
+  2. Percorre a tabela incrementando i de 0 ate N-1.
+  3. A cada iteracao, se table[pos] == EMPTY, insere ali e retorna i
+     (i e exatamente o numero de slots ocupados que foram encontrados
+      antes do slot livre, ou seja, o numero de colisoes desta insercao).
+  4. Se table[pos] == k, a chave ja existe; retorna sem contar colisao.
+  5. Caso contrario, avanca: pos = (pos + step) % N.
+
+O programa acumula o total de colisoes e imprime uma linha CSV a cada 100
+insercoes, gerando 42 pontos no grafico (100, 200, ..., 4000, 4096).
+
+4.5 Saida do programa
+----------------------
+A saida padrao (stdout) e redirecionada para resultados.csv:
+
+  chaves_inseridas,colisoes_acumuladas
+  100,1
+  200,3
+  300,8
+  400,15
+  500,28
+  600,39
+  700,54
+  800,68
+  900,86
+  1000,111
+  1100,126
+  1200,157
+  1300,201
+  1400,230
+  1500,272
+  1600,316
+  1700,358
+  1800,399
+  1900,457
+  2000,510
+  2100,590
+  2200,667
+  2300,740
+  2400,838
+  2500,934
+  2600,1039
+  2700,1157
+  2800,1272
+  2900,1420
+  3000,1571
+  3100,1725
+  3200,1884
+  3300,2053
+  3400,2264
+  3500,2457
+  3600,2655
+  3700,2934
+  3800,3215
+  3900,3533
+  4000,3915
+  4096,4219
+
+Interpretacao dos resultados:
+  - Ate ~2000 chaves (fator de carga 40%), o crescimento das colisoes e suave
+    e praticamente linear, indicando boa dispersao.
+  - Entre 2000 e 3000 chaves (fator 40-60%), as colisoes comecam a crescer
+    mais rapidamente, comportamento esperado pela teoria.
+  - Acima de 3000 chaves (fator > 60%), o crescimento e acelerado, tipico de
+    qualquer metodo de endereçamento aberto conforme a tabela se aproxima da
+    capacidade maxima.
+  - Com todas as 4096 chaves inseridas (fator 81,9%), o total acumulado de
+    colisoes e 4219, valor proximo ao numero de chaves, o que e satisfatorio
+    para um fator de carga tao elevado.
+
+
+--------------------------------------------------------------------------------
+5. OBSERVACOES E CONCLUSOES
+--------------------------------------------------------------------------------
+
+5.1 Como compilar e executar
+------------------------------
+Requisitos: GCC instalado e Python 3 com matplotlib (pip install matplotlib).
+
+Passo 1 - Compilar o programa C:
+  gcc hash_cpf.c -o hash_cpf -O2
+
+Passo 2 - Executar e gerar o CSV (o arquivo CPFsValidos.txt deve estar na
+          mesma pasta):
+  Windows (PowerShell):  .\hash_cpf.exe > resultados.csv
+  Linux/macOS:           ./hash_cpf > resultados.csv
+
+Passo 3 - Gerar o grafico:
+  python grafico.py resultados.csv
+
+O grafico sera salvo em grafico_colisoes.png.
+
+5.2 O que funciona
+-------------------
+  - Leitura correta dos 4096 CPFs do arquivo de entrada.
+  - Insercao de todas as chaves sem falha (tabela nao atinge capacidade maxima).
+  - Contagem precisa das colisoes por insercao e acumulada.
+  - Geracao do CSV com os pontos de 100 em 100 chaves mais o ponto final.
+  - Geracao do grafico com linha de referencia comparativa.
+
+5.3 Limitacoes e aspectos de atencao
+--------------------------------------
+  - O programa nao suporta busca ou remocao de chaves; apenas insercao.
+  - A tabela e estatica (array global); nao e possivel redimensiona-la em
+    tempo de execucao.
+  - Chaves duplicadas no arquivo sao silenciosamente ignoradas (nao contam
+    como colisao e nao sao reinseridas).
+  - O executavel espera encontrar CPFsValidos.txt no diretorio de trabalho
+    atual; caminhos relativos diferentes causarao erro de abertura de arquivo.
+
+5.4 Dificuldades encontradas
+------------------------------
+  - O arquivo CPFsValidos.txt contem apenas os CPFs (um por linha), sem
+    numeracao de linhas. O Read tool do IDE exibe numeros de linha
+    visualmente, o que levou inicialmente a um fscanf com dois campos
+    ("%d %lld"), fazendo o programa ler apenas 2048 CPFs (cada leitura
+    consumia dois CPFs em vez de um). O erro foi identificado ao verificar
+    os bytes iniciais do arquivo e corrigido usando fscanf(fp, "%lld", &cpf).
+  - O redirecionamento de saida no PowerShell gera arquivos em UTF-16 LE com
+    BOM, o que causou erro de leitura no script Python. A solucao foi
+    especificar encoding="utf-16" ao abrir o CSV no script.
+
+5.5 Conclusoes
+---------------
+O double hashing com N = 5003 e H2 = 4999 (ambos primos) mostrou-se eficaz
+para a distribuicao dos CPFs. O grafico gerado evidencia o comportamento
+classico de tabelas hash com endereçamento aberto: crescimento quase linear
+de colisoes nos fatores de carga baixos e aceleracao significativa acima de
+60%, o que confirma a importancia de se manter a tabela com folga adequada.
+A escolha do double hashing minimizou agrupamentos e manteve o numero total
+de colisoes em um patamar competitivo para o fator de carga de ~82%.
+
+================================================================================
