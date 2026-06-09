@@ -11,7 +11,6 @@ struct no {
     t_no *ramo[MAX + 1];
 };
 
-/* Aloca e inicializa um nó com ndesc chaves e ramos dados */
 static t_no *cria_no(int ndesc, int c0, int c1, int c2, int c3, t_no *r0, t_no *r1, t_no *r2, t_no *r3, t_no *r4) {
     t_no *no = (t_no *)malloc(sizeof(t_no));
     no->ndesc   = ndesc;
@@ -27,14 +26,10 @@ static t_no *cria_no(int ndesc, int c0, int c1, int c2, int c3, t_no *r0, t_no *
     return no;
 }
 
-/*
- * Percorre a árvore B em ordem simétrica e imprime todas as chaves x tais que lim_inf < x < lim_sup.
- */
 void intervalo(t_no *arv, int lim_inf, int lim_sup) {
     if (arv == NULL) return;
 
-    int i;
-    for (i = 0; i < arv->ndesc; i++) {
+    for (int i = 0; i < arv->ndesc; i++) {
         intervalo(arv->ramo[i], lim_inf, lim_sup);
         if (arv->chave[i] > lim_inf && arv->chave[i] < lim_sup)
             printf("%d\n", arv->chave[i]);
@@ -43,7 +38,6 @@ void intervalo(t_no *arv, int lim_inf, int lim_sup) {
     intervalo(arv->ramo[arv->ndesc], lim_inf, lim_sup);
 }
 
-/* Libera toda a árvore recursivamente */
 static void libera(t_no *arv) {
     if (arv == NULL) return;
     int i;
@@ -52,15 +46,6 @@ static void libera(t_no *arv) {
     free(arv);
 }
 
-/*
- * Constrói exatamente a árvore B de ordem 2 do enunciado:
- *
- *                        [ 100 ]
- *              /                      \
- *        [50 | 75]               [120 | 200]
- *       /    |    \            /      |       \
- *  [10,40] [60,70] [80,90]  [110,115] [130,135,140,170] [220,230,240,250]
- */
 static t_no *constroi_arvore(void) {
     /* folhas da subárvore esquerda */
     t_no *f1 = cria_no(2, 10,  40,  0,   0,
